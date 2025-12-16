@@ -1,0 +1,40 @@
+CREATE TABLE Student_Answer (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_activity_result_id INTEGER NOT NULL REFERENCES Student_Activity_Results(id) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL REFERENCES Questions (id) ON DELETE CASCADE,
+    selected_option TEXT NOT NULL CHECK(selected_option IN ('A','B','C','D')),
+    UNIQUE(student_activity_result_id, question_id)
+);
+
+addStudentAnswer:
+INSERT INTO Student_Answer (
+    student_activity_result_id,
+    question_id,
+    selected_option
+) VALUES (?, ?, ?);
+
+getAllStudentAnswers:
+SELECT * FROM Student_Answer;
+
+getStudentAnswersByResult:
+SELECT * FROM Student_Answer
+WHERE student_activity_result_id = ?;
+
+getStudentAnswersByQuestion:
+SELECT * FROM Student_Answer
+WHERE question_id = ?;
+
+updateStudentAnswer:
+UPDATE Student_Answer SET
+    selected_option = ?
+WHERE student_activity_result_id = ? AND question_id = ?;
+
+deleteStudentAnswer:
+DELETE FROM Student_Answer
+WHERE student_activity_result_id = ? AND question_id = ?;
+
+countCorrectAnswersByResult:
+SELECT COUNT(*) AS correct_count
+FROM Student_Answer sa
+JOIN Questions q ON sa.question_id = q.id
+WHERE sa.student_activity_result_id = ? AND sa.selected_option = q.correct_option;

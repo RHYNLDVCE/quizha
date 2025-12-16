@@ -1,0 +1,59 @@
+CREATE TABLE Questions(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  activity_id INTEGER NOT NULL REFERENCES Activity(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  question_text TEXT NOT NULL,
+  option_a TEXT NOT NULL,
+  option_b TEXT NOT NULL,
+  option_c TEXT NOT NULL,
+  option_d TEXT NOT NULL,
+  correct_option TEXT NOT NULL CHECK(correct_option IN ('A','B','C','D'))
+);
+
+addQuestion:
+INSERT INTO Questions (
+    activity_id,
+    question_text,
+    option_a,
+    option_b,
+    option_c,
+    option_d,
+    correct_option
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getAllQuestions:
+SELECT * FROM Questions;
+
+getQuestionById:
+SELECT * FROM Questions
+WHERE id = ?;
+
+getQuestionsByActivityId:
+SELECT * FROM Questions
+WHERE activity_id = ?;
+
+updateQuestion:
+UPDATE Questions SET
+    question_text = ?,
+    option_a = ?,
+    option_b = ?,
+    option_c = ?,
+    option_d = ?,
+    correct_option = ?,
+    activity_id = ?
+WHERE id = ?;
+
+deleteQuestion:
+DELETE FROM Questions
+WHERE id = ?;
+
+deleteQuestionsByActivityId:
+DELETE FROM Questions
+WHERE activity_id = ?;
+
+countQuestionsByActivityId:
+SELECT COUNT(*)
+FROM Questions
+WHERE activity_id = ?;
+
+getLastInsertQuestion:
+SELECT last_insert_rowid();

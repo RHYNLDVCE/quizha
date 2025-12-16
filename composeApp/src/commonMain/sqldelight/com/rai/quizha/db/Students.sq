@@ -1,0 +1,55 @@
+CREATE TABLE Students (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    yearlevel TEXT NOT NULL CHECK(yearlevel IN ('1st','2nd','3rd','4th')),
+    department TEXT NOT NULL,
+    course TEXT NOT NULL,
+    birthdate TEXT NOT NULL
+);
+
+addStudent:
+INSERT INTO Students (
+    first_name,
+    last_name,
+    yearlevel,
+    department,
+    course,
+    birthdate
+) VALUES (?, ?, ?, ?, ?, ?);
+
+getAllStudents:
+SELECT * FROM Students;
+
+getStudentById:
+SELECT * FROM Students
+WHERE id = ?;
+
+getStudentsByYearlevel:
+SELECT * FROM Students
+WHERE yearlevel = ?;
+
+getStudentsByDepartment:
+SELECT * FROM Students
+WHERE department = ?;
+
+searchStudentsByName:
+SELECT * FROM Students
+WHERE first_name LIKE ? OR last_name LIKE ?;
+
+updateStudent:
+UPDATE Students SET
+    first_name = ?,
+    last_name = ?,
+    yearlevel = ?,
+    department = ?,
+    course = ?,
+    birthdate = ?
+WHERE id = ?;
+
+deleteStudent:
+DELETE FROM Students
+WHERE id = ?;
+
+getLastInsertStudent:
+SELECT last_insert_rowid();

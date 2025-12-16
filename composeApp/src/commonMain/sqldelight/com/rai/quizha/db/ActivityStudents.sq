@@ -1,0 +1,36 @@
+CREATE TABLE Activity_Students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id INTEGER NOT NULL REFERENCES Activity(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES Students(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(activity_id, student_id)
+);
+
+addStudentToActivity:
+INSERT INTO Activity_Students (
+    activity_id,
+    student_id
+) VALUES (?, ?);
+
+removeStudentFromActivity:
+DELETE FROM Activity_Students
+WHERE activity_id = ? AND student_id = ?;
+
+
+getIdByActivityAndStudent:
+SELECT id FROM Activity_Students
+WHERE activity_id = ? AND student_id = ?;
+
+getStudentsByActivity:
+SELECT Students.*
+FROM Students
+JOIN Activity_Students ON Activity_Students.student_id = Students.id
+WHERE Activity_Students.activity_id = ?;
+
+getActivitiesByStudent:
+SELECT Activity.*
+FROM Activity
+JOIN Activity_Students ON Activity_Students.activity_id = Activity.id
+WHERE Activity_Students.student_id = ?;
+
+getLastInsertActivityStudent:
+SELECT last_insert_rowid();

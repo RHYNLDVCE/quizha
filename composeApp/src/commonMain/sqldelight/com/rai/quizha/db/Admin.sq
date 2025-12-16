@@ -1,0 +1,22 @@
+CREATE TABLE Admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    fullname TEXT NOT NULL
+);
+
+selectAllAdmin:
+SELECT * FROM Admin;
+
+selectAdminByUsername:
+SELECT * FROM Admin WHERE username = ?;
+
+insertAdmin:
+INSERT INTO Admin(username, password_hash, fullname)
+VALUES (?, ?, ?);
+
+deleteAdmin:
+DELETE FROM Admin WHERE id = ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

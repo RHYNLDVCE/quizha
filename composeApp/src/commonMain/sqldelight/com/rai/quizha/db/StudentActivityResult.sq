@@ -1,0 +1,53 @@
+CREATE TABLE Student_Activity_Results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_student_id INTEGER NOT NULL REFERENCES Activity_Students(id) ON DELETE CASCADE,
+    score INTEGER,
+    started_at TEXT NOT NULL,
+    completed_at TEXT
+);
+
+addStudentActivityResult:
+INSERT INTO Student_Activity_Results (
+    activity_student_id,
+    score,
+    started_at,
+    completed_at
+) VALUES (?, ?, ?, ?);
+
+getAllStudentActivityResults:
+SELECT * FROM Student_Activity_Results;
+
+getStudentActivityResultById:
+SELECT * FROM Student_Activity_Results
+WHERE id = ?;
+
+
+getStudentActivityResultsByEnrollment:
+SELECT * FROM Student_Activity_Results
+WHERE activity_student_id = ?;
+
+updateStudentActivityResult:
+UPDATE Student_Activity_Results SET
+    score = ?,
+    completed_at = ?
+WHERE id = ?;
+
+deleteStudentActivityResult:
+DELETE FROM Student_Activity_Results
+WHERE id = ?;
+
+getLeaderboard:
+SELECT
+    s.id AS student_id,
+    s.first_name,
+    s.last_name,
+    sar.score,
+    sar.id AS result_id
+FROM Student_Activity_Results sar
+JOIN Activity_Students as_link ON sar.activity_student_id = as_link.id
+JOIN Students s ON as_link.student_id = s.id
+WHERE as_link.activity_id = ?
+ORDER BY sar.score DESC;
+
+countStudentActivityResults:
+SELECT COUNT(*) FROM Student_Activity_Results;
