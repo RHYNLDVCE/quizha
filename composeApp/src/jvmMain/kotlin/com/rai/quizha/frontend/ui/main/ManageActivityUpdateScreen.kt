@@ -78,11 +78,13 @@ fun ManageActivityUpdateScreen(
     // --- Populate Questions List ---
     LaunchedEffect(existingQuestions) {
         if (selectedActivity != null && existingQuestions.isNotEmpty()) {
+            // FIX: Ensure we only populate if the draft list is empty to prevent duplicates
             if (draftQuestions.isEmpty()) {
                 existingQuestions.forEach { q ->
                     draftQuestions.add(
                         QuestionDraft(
-                            id = UUID.randomUUID().toString(),
+                            // FIX: Use the actual DB ID, converted to String
+                            id = q.id.toString(),
                             text = mutableStateOf(q.questionText),
                             optionA = mutableStateOf(q.optionA),
                             optionB = mutableStateOf(q.optionB),
@@ -380,7 +382,7 @@ fun ManageActivityUpdateScreen(
     }
 }
 
-// --- UPDATED LOGIC (FIX FOR SAVING STUDENTS) ---
+// --- UPDATED SAFE LOGIC (Fix for saving students & preventing answer deletion) ---
 fun updateActivityWithQuestionsAndStudents(
     activityViewModel: ActivityViewModel,
     questionsViewModel: QuestionsViewModel,
@@ -403,38 +405,55 @@ fun updateActivityWithQuestionsAndStudents(
 
     activityViewModel.updateActivity(updatedActivity)
 
-    // 2. Handle Questions (Delete All -> Recreate)
-    questionsViewModel.deleteQuestionsByActivityId(originalActivity.id) {
+    // 2. Handle Questions Non-Destructively
 
-        // Create new questions
-        if (questions.isNotEmpty()) {
-            questions.forEach { draft ->
-                val newQ = Question(
-                    id = 0,
-                    activityId = originalActivity.id,
-                    questionText = draft.text.value,
-                    optionA = draft.optionA.value,
-                    optionB = draft.optionB.value,
-                    optionC = draft.optionC.value,
-                    optionD = draft.optionD.value,
-                    correctOption = draft.correctOption.value
-                )
-                questionsViewModel.createQuestion(newQ) { }
-            }
-        }
+    // A. Identify Original vs Current IDs
+    val originalQuestions = questionsViewModel.questions.value
+    val originalIds = originalQuestions.map { it.id }.toSet()
+    val currentDraftIds = questions.mapNotNull { it.id.toLongOrNull() }.toSet()
 
-        // 3. Assign New Students (Database)
-        if (selectedStudentIds.isEmpty()) {
-            onSuccess()
+    // B. Delete only questions that were explicitly REMOVED in the UI
+    val idsToDelete = originalIds - currentDraftIds
+    idsToDelete.forEach { id ->
+        questionsViewModel.deleteQuestion(id) {}
+    }
+
+    // C. Update Existing or Create New
+    questions.forEach { draft ->
+        val draftId = draft.id.toLongOrNull() ?: 0L
+
+        val questionData = Question(
+            id = draftId,
+            activityId = originalActivity.id,
+            questionText = draft.text.value,
+            optionA = draft.optionA.value,
+            optionB = draft.optionB.value,
+            optionC = draft.optionC.value,
+            optionD = draft.optionD.value,
+            correctOption = draft.correctOption.value
+        )
+
+        if (draftId > 0 && originalIds.contains(draftId)) {
+            // ID exists in DB -> UPDATE
+            questionsViewModel.updateQuestion(questionData) {}
         } else {
-            var pendingRequests = selectedStudentIds.size
+            // ID is 0 or new -> CREATE
+            questionsViewModel.createQuestion(questionData) {}
+        }
+    }
 
-            selectedStudentIds.forEach { studentId ->
-                activityViewModel.assignStudentToActivity(originalActivity.id, studentId) { success ->
-                    pendingRequests--
-                    if (pendingRequests == 0) {
-                        onSuccess()
-                    }
+    // 3. Assign New Students (Database)
+    // (Only processes newly selected students, existing assignments remain untouched)
+    if (selectedStudentIds.isEmpty()) {
+        onSuccess()
+    } else {
+        var pendingRequests = selectedStudentIds.size
+        // Simple counter to trigger onSuccess only when all API calls finish
+        selectedStudentIds.forEach { studentId ->
+            activityViewModel.assignStudentToActivity(originalActivity.id, studentId) { success ->
+                pendingRequests--
+                if (pendingRequests == 0) {
+                    onSuccess()
                 }
             }
         }

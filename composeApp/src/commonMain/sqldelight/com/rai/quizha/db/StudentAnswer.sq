@@ -13,6 +13,9 @@ INSERT INTO Student_Answer (
     selected_option
 ) VALUES (?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 getAllStudentAnswers:
 SELECT * FROM Student_Answer;
 

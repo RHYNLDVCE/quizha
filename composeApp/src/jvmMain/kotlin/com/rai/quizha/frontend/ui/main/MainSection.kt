@@ -1,3 +1,4 @@
+// src/jvmMain/kotlin/com/rai/quizha/frontend/ui/main/MainSection.kt
 package com.rai.quizha.frontend.ui.main
 
 import androidx.compose.animation.*
@@ -6,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Dashboard
@@ -13,19 +15,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.rai.quizha.frontend.viewmodel.ActivityViewModel
 import com.rai.quizha.frontend.viewmodel.QuestionsViewModel
 import com.rai.quizha.frontend.viewmodel.StudentViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 // =========================================================================
 // 0. Theme Colors
@@ -53,6 +51,10 @@ sealed class TopLevelNavItem(title: String, icon: ImageVector, route: String) :
     )
     data object Activities : TopLevelNavItem(
         "Manage Activities", Icons.Default.List, "ACTIVITIES_BASE_ROUTE"
+    )
+    // NEW: Settings Top Level Item
+    data object Settings : TopLevelNavItem(
+        "Settings", Icons.Default.Settings, "SETTINGS_BASE_ROUTE"
     )
 }
 
@@ -83,6 +85,12 @@ sealed class SubNavItem(title: String, icon: ImageVector, route: String) :
     data object ActivityUpdate : SubNavItem(
         "Update Activity", Icons.Default.Edit, "ACTIVITIES_UPDATE_ROUTE"
     )
+
+    // --- Settings Sub Items ---
+    // NEW: Logout Action (Hidden inside Settings)
+    data object Logout : SubNavItem(
+        "Logout", Icons.AutoMirrored.Filled.ExitToApp, "LOGOUT_ACTION"
+    )
 }
 
 val allDestinations = listOf(
@@ -93,7 +101,8 @@ val allDestinations = listOf(
     SubNavItem.StudentDelete,
     SubNavItem.ActivityList,
     SubNavItem.ActivityCreate,
-    SubNavItem.ActivityUpdate
+    SubNavItem.ActivityUpdate,
+    SubNavItem.Logout
 )
 
 // =========================================================================
@@ -106,14 +115,13 @@ fun ExpandableNavigationDrawerItem(
     subItems: List<SubNavItem>,
     currentSelectedRoute: String,
     onItemSelected: (String) -> Unit
-    // removed closeDrawer callback since panel is now permanent
 ) {
     // Check if any child is selected to highlight the parent group
     val isChildSelected = subItems.any { it.route == currentSelectedRoute }
 
     var isExpanded by remember { mutableStateOf(isChildSelected) }
 
-    // Auto-expand if a child becomes active (optional, but good UX)
+    // Auto-expand if a child becomes active
     LaunchedEffect(currentSelectedRoute) {
         if (subItems.any { it.route == currentSelectedRoute }) {
             isExpanded = true
@@ -217,12 +225,13 @@ fun MainScreen(
     authToken: String,
     studentViewModel: StudentViewModel,
     activityViewModel: ActivityViewModel,
-    questionsViewModel: QuestionsViewModel
+    questionsViewModel: QuestionsViewModel,
+    serverIp: String,   // <--- NEW PARAM
+    serverPort: Int,    // <--- NEW PARAM
+    onLogout: () -> Unit
 ) {
     var selectedRoute by remember { mutableStateOf(TopLevelNavItem.Dashboard.route) }
     val currentTitle = allDestinations.find { it.route == selectedRoute }?.title ?: "Main Application"
-
-    // Removed drawerState and scope as the drawer is now permanent
 
     val studentSubItems = listOf(
         SubNavItem.StudentList,
@@ -237,14 +246,18 @@ fun MainScreen(
         SubNavItem.ActivityUpdate
     )
 
-    // Switched to PermanentNavigationDrawer for a fixed left panel
+    // Settings only contains Logout
+    val settingsSubItems = listOf(
+        SubNavItem.Logout
+    )
+
     PermanentNavigationDrawer(
         drawerContent = {
             PermanentDrawerSheet(
                 drawerContainerColor = Color.White,
                 modifier = Modifier.width(300.dp)
             ) {
-                // --- Modern Drawer Header ---
+                // --- Header ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -257,7 +270,6 @@ fun MainScreen(
                     contentAlignment = Alignment.BottomStart
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
-                        // Initials or Icon
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = Color.White.copy(alpha = 0.2f),
@@ -336,6 +348,37 @@ fun MainScreen(
                     currentSelectedRoute = selectedRoute,
                     onItemSelected = { route -> selectedRoute = route }
                 )
+
+                // --- PUSH SETTINGS TO BOTTOM ---
+                Spacer(Modifier.weight(1f))
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp).background(Color.Gray.copy(alpha=0.2f)))
+
+                Text(
+                    "PREFERENCES",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 24.dp, bottom = 8.dp)
+                )
+
+                // --- 4. Settings (Contains Logout) ---
+                ExpandableNavigationDrawerItem(
+                    parentItem = TopLevelNavItem.Settings,
+                    subItems = settingsSubItems,
+                    currentSelectedRoute = selectedRoute,
+                    onItemSelected = { route ->
+                        // INTERCEPT LOGOUT
+                        if (route == SubNavItem.Logout.route) {
+                            onLogout()
+                        } else {
+                            selectedRoute = route
+                        }
+                    }
+                )
+
+                // Add a little padding at the very bottom
+                Spacer(Modifier.height(16.dp))
             }
         },
         content = {
@@ -349,7 +392,6 @@ fun MainScreen(
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                             )
                         },
-                        // Removed navigationIcon (Menu button) because drawer is permanent
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.White,
                             titleContentColor = Color.Black
@@ -371,7 +413,9 @@ fun MainScreen(
                         route = selectedRoute,
                         studentViewModel = studentViewModel,
                         activityViewModel = activityViewModel,
-                        questionsViewModel = questionsViewModel
+                        questionsViewModel = questionsViewModel,
+                        serverIp = serverIp,     // <--- Passed Here
+                        serverPort = serverPort  // <--- Passed Here
                     )
                 }
             }
@@ -388,11 +432,18 @@ fun GetScreenForRoute(
     route: String,
     studentViewModel: StudentViewModel,
     activityViewModel: ActivityViewModel,
-    questionsViewModel: QuestionsViewModel
+    questionsViewModel: QuestionsViewModel,
+    serverIp: String,   // <--- NEW PARAM
+    serverPort: Int     // <--- NEW PARAM
 ) {
-    // Fade animation wrapper could be added here for extra polish
     when (route) {
-        TopLevelNavItem.Dashboard.route -> DashboardScreen()
+        // Pass IP/Port to Dashboard
+        TopLevelNavItem.Dashboard.route -> DashboardScreen(
+            studentViewModel = studentViewModel,
+            activityViewModel = activityViewModel,
+            serverIp = serverIp,
+            serverPort = serverPort
+        )
 
         // Student Routes
         SubNavItem.StudentList.route -> ManageStudentsListScreen(viewModel = studentViewModel)
@@ -415,6 +466,15 @@ fun GetScreenForRoute(
             questionsViewModel = questionsViewModel,
             studentViewModel = studentViewModel
         )
+
+        // Settings / Logout Routes don't need a screen, as Logout is intercepted
+        // But if we add a "General Settings" page later, it would go here.
+        SubNavItem.Logout.route -> {
+            // Placeholder in case of lag
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
 
         else -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

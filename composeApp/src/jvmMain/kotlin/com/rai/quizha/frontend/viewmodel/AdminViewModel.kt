@@ -1,3 +1,4 @@
+// src/jvmMain/kotlin/com/rai/quizha/frontend/viewmodel/AdminViewModel.kt
 package com.rai.quizha.frontend.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -29,13 +30,12 @@ class AdminViewModel(private val client: HttpClient, private val baseUrl: String
             try {
                 val response = client.post("$baseUrl/admins/login") {
                     contentType(ContentType.Application.Json)
-                    setBody(LoginRequest(username, password))  // plain text password
+                    setBody(LoginRequest(username, password))
                 }
-
 
                 when (response.status) {
                     HttpStatusCode.OK -> {
-                        val loginResponse: LoginResponse = response.body() // deserialize only on 200
+                        val loginResponse: LoginResponse = response.body()
                         _loginResult.value = loginResponse.token
                         _error.value = null
                     }
@@ -55,6 +55,11 @@ class AdminViewModel(private val client: HttpClient, private val baseUrl: String
         }
     }
 
+    // --- NEW: Reset state on logout ---
+    fun logout() {
+        _loginResult.value = null
+        _error.value = null
+    }
 
     fun fetchAdmins() {
         viewModelScope.launch {

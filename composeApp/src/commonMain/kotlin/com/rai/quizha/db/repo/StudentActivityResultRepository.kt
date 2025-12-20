@@ -34,12 +34,15 @@ class StudentActivityResultRepository(
     )
 
     suspend fun addStudentActivityResult(result: StudentActivityResult): Long = withContext(ioDispatcher) {
-        queries.addStudentActivityResult(
-            activity_student_id = result.activityStudentId,
-            score = result.score?.toLong(),
-            started_at = result.startedAt,
-            completed_at = result.completedAt
-        ).value as Long
+        db.transactionWithResult {
+            queries.addStudentActivityResult(
+                activity_student_id = result.activityStudentId,
+                score = result.score?.toLong(),
+                started_at = result.startedAt,
+                completed_at = result.completedAt
+            )
+            queries.lastInsertRowId().executeAsOne()
+        }
     }
 
     suspend fun updateStudentActivityResult(result: StudentActivityResult) = withContext(ioDispatcher) {
@@ -47,11 +50,11 @@ class StudentActivityResultRepository(
             score = result.score?.toLong(),
             completed_at = result.completedAt,
             id = result.id
-        ).value
+        )
     }
 
     suspend fun deleteStudentActivityResult(id: Long) = withContext(ioDispatcher) {
-        queries.deleteStudentActivityResult(id).value
+        queries.deleteStudentActivityResult(id)
     }
 
     suspend fun getStudentActivityResultById(id: Long): StudentActivityResult? = withContext(ioDispatcher) {
@@ -74,7 +77,6 @@ class StudentActivityResultRepository(
         queries.countStudentActivityResults().executeAsOne()
     }
 
-    // --- REFACTORED: Direct List Fetch for Routes ---
     suspend fun getLeaderboardList(activityId: Long): List<LeaderboardRow> = withContext(ioDispatcher) {
         queries.getLeaderboard(activityId).executeAsList().map {
             LeaderboardRow(

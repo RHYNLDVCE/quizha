@@ -14,13 +14,16 @@ INSERT INTO Student_Activity_Results (
     completed_at
 ) VALUES (?, ?, ?, ?);
 
+-- THIS IS THE MISSING PIECE
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 getAllStudentActivityResults:
 SELECT * FROM Student_Activity_Results;
 
 getStudentActivityResultById:
 SELECT * FROM Student_Activity_Results
 WHERE id = ?;
-
 
 getStudentActivityResultsByEnrollment:
 SELECT * FROM Student_Activity_Results
